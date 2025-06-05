@@ -468,7 +468,7 @@
                     document.getElementById('satelliteData').style.display = 'block';
                     document.getElementById('azimuth').textContent = data.azimuth + '°';
                     document.getElementById('elevation').textContent = data.elevation + '°';
-                    document.getElementById('roll').textContent = data.roll + '°';
+                    document.getElementById('roll').textContent = (data.roll || 0) + '°';
                     document.getElementById('timestamp').textContent = data.timestamp;
                     
                     // Update serial status

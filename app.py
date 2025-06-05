@@ -144,7 +144,7 @@ def set_manual_position():
     data = request.json
     azimuth = data.get('azimuth')
     elevation = data.get('elevation')
-    roll = data.get('roll')
+    roll = data.get('roll', 0)  # Default to 0 if roll is not provided
     
     if azimuth is None or elevation is None:
         return jsonify({'error': 'Missing azimuth or elevation values'}), 400
@@ -155,7 +155,7 @@ def set_manual_position():
     if not (0 <= elevation <= 90):
         return jsonify({'error': 'Elevation must be between 0 and 90 degrees'}), 400
     
-    if roll is not None and not (0 <= roll <= 90):
+    if not (0 <= roll <= 90):
         return jsonify({'error': 'Roll must be between 0 and 90 degrees'}), 400
     
     if ser and ser.is_open:
@@ -164,7 +164,7 @@ def set_manual_position():
                 'message': 'Position updated successfully',
                 'azimuth': round(azimuth, 2),
                 'elevation': round(elevation, 2),
-                'roll': round(roll, 2) if roll is not None else None,
+                'roll': round(roll, 2),
                 'timestamp': datetime.now().strftime('%H:%M:%S UTC')
             })
         else:
