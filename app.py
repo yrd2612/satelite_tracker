@@ -38,14 +38,20 @@ def get_satellite_position(satellite):
         return None, None
     return az.degrees, alt.degrees
 
-def send_to_arduino(azimuth, elevation):
+def send_to_arduino(azimuth, elevation, roll=None):
     """Send azimuth and elevation data to Arduino in the required format"""
     if ser is None or not ser.is_open:
         return False
         
     az_str = f"AZ{int(round(azimuth))}"
     el_str = f"EL{int(round(elevation))}"
-    command = f"<{az_str}><{el_str}>\n"
+    command = f"<{az_str}><{el_str}>"
+    
+    if roll is not None:
+        rl_str = f"RL{int(round(roll))}"
+        command += f"<{rl_str}>"
+    
+    command += "\n"
     
     try:
         ser.write(command.encode('utf-8'))
@@ -138,6 +144,7 @@ def set_manual_position():
     data = request.json
     azimuth = data.get('azimuth')
     elevation = data.get('elevation')
+    roll = data.get('roll')
     
     if azimuth is None or elevation is None:
         return jsonify({'error': 'Missing azimuth or elevation values'}), 400
@@ -148,12 +155,16 @@ def set_manual_position():
     if not (0 <= elevation <= 90):
         return jsonify({'error': 'Elevation must be between 0 and 90 degrees'}), 400
     
+    if roll is not None and not (0 <= roll <= 90):
+        return jsonify({'error': 'Roll must be between 0 and 90 degrees'}), 400
+    
     if ser and ser.is_open:
-        if send_to_arduino(azimuth, elevation):
+        if send_to_arduino(azimuth, elevation, roll):
             return jsonify({
                 'message': 'Position updated successfully',
                 'azimuth': round(azimuth, 2),
                 'elevation': round(elevation, 2),
+                'roll': round(roll, 2) if roll is not None else None,
                 'timestamp': datetime.now().strftime('%H:%M:%S UTC')
             })
         else:
