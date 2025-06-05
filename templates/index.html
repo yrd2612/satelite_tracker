@@ -228,15 +228,19 @@
 
                 <div class="data-display" id="satelliteData" style="display: none;">
                     <div class="row">
-                        <div class="col-md-4 text-center">
+                        <div class="col-md-3 text-center">
                             <div class="data-label">Azimuth</div>
                             <div class="data-value" id="azimuth">--</div>
                         </div>
-                        <div class="col-md-4 text-center">
+                        <div class="col-md-3 text-center">
                             <div class="data-label">Elevation</div>
                             <div class="data-value" id="elevation">--</div>
                         </div>
-                        <div class="col-md-4 text-center">
+                        <div class="col-md-3 text-center">
+                            <div class="data-label">Roll</div>
+                            <div class="data-value" id="roll">--</div>
+                        </div>
+                        <div class="col-md-3 text-center">
                             <div class="data-label">Last Updated</div>
                             <div class="data-value" id="timestamp">--</div>
                         </div>
@@ -377,6 +381,7 @@
             document.getElementById('satelliteData').style.display = 'block';
             document.getElementById('azimuth').textContent = az.toFixed(1) + '°';
             document.getElementById('elevation').textContent = el.toFixed(1) + '°';
+            document.getElementById('roll').textContent = roll.toFixed(1) + '°';
             document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
             document.getElementById('errorMessage').style.display = 'none';
 
@@ -439,6 +444,7 @@
                     document.getElementById('satelliteData').style.display = 'block';
                     document.getElementById('azimuth').textContent = data.azimuth + '°';
                     document.getElementById('elevation').textContent = data.elevation + '°';
+                    document.getElementById('roll').textContent = data.roll + '°';
                     document.getElementById('timestamp').textContent = data.timestamp;
                     
                     // Update serial status

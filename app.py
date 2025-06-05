@@ -173,4 +173,4 @@ def set_manual_position():
         return jsonify({'error': 'Serial port not connected'}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=True,host='0.0.0.0',port=5000) 
