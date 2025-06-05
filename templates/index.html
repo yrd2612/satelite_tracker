@@ -68,6 +68,23 @@
             </div>
             <div class="card-body">
                 <div class="mb-4">
+                    <label for="serialPortSelect" class="form-label">Select Serial Port:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="serialPortInput" list="serialPortList" placeholder="Enter or select serial port...">
+                        <datalist id="serialPortList">
+                            <!-- Options will be populated dynamically -->
+                        </datalist>
+                        <button class="btn btn-primary" id="refreshPorts" title="Refresh available ports">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="btn btn-success" id="connectPort" title="Connect to selected port">
+                            <i class="fas fa-plug"></i>
+                        </button>
+                    </div>
+                    <div class="form-text" id="serialStatus">Serial port: Not connected</div>
+                </div>
+
+                <div class="mb-4">
                     <label for="satelliteSelect" class="form-label">Select Satellite:</label>
                     <select class="form-select" id="satelliteSelect">
                         <option value="">Choose a satellite...</option>
@@ -107,6 +124,75 @@
 
     <script>
         let updateInterval;
+        let currentSerialPort = null;
+
+        function updateSerialPorts() {
+            fetch('/get_serial_ports')
+                .then(response => response.json())
+                .then(data => {
+                    const datalist = document.getElementById('serialPortList');
+                    datalist.innerHTML = ''; // Clear existing options
+                    data.ports.forEach(port => {
+                        const option = document.createElement('option');
+                        option.value = port;
+                        datalist.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching serial ports:', error);
+                });
+        }
+
+        function setSerialPort(port) {
+            if (!port) {
+                document.getElementById('serialStatus').textContent = 'Error: No port specified';
+                document.getElementById('serialStatus').style.color = '#dc3545';
+                return;
+            }
+
+            fetch('/set_serial_port', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ port: port })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('serialStatus').textContent = `Error: ${data.error}`;
+                    document.getElementById('serialStatus').style.color = '#dc3545';
+                } else {
+                    document.getElementById('serialStatus').textContent = data.message;
+                    document.getElementById('serialStatus').style.color = '#198754';
+                    currentSerialPort = port;
+                }
+            })
+            .catch(error => {
+                document.getElementById('serialStatus').textContent = 'Error connecting to serial port';
+                document.getElementById('serialStatus').style.color = '#dc3545';
+            });
+        }
+
+        document.getElementById('connectPort').addEventListener('click', function() {
+            const port = document.getElementById('serialPortInput').value;
+            setSerialPort(port);
+        });
+
+        document.getElementById('serialPortInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const port = this.value;
+                setSerialPort(port);
+            }
+        });
+
+        document.getElementById('refreshPorts').addEventListener('click', function() {
+            updateSerialPorts();
+        });
+
+        // Initial load of serial ports
+        updateSerialPorts();
 
         function updateSatelliteData() {
             const satelliteSelect = document.getElementById('satelliteSelect');
@@ -141,6 +227,15 @@
                     document.getElementById('azimuth').textContent = data.azimuth + '°';
                     document.getElementById('elevation').textContent = data.elevation + '°';
                     document.getElementById('timestamp').textContent = data.timestamp;
+                    
+                    // Update serial status
+                    if (data.serial_status === 'connected') {
+                        document.getElementById('serialStatus').textContent = `Serial port: Connected to ${currentSerialPort}`;
+                        document.getElementById('serialStatus').style.color = '#198754';
+                    } else {
+                        document.getElementById('serialStatus').textContent = 'Serial port: Not connected';
+                        document.getElementById('serialStatus').style.color = '#dc3545';
+                    }
                 }
             })
             .catch(error => {

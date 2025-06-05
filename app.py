@@ -2,9 +2,16 @@ from flask import Flask, render_template, jsonify, request
 from skyfield.api import load, EarthSatellite, wgs84
 import json
 import time
+import serial
+import serial.tools.list_ports
 from datetime import datetime
 
 app = Flask(__name__)
+
+# Serial port configuration
+SERIAL_PORT = None  # Will be set via frontend
+BAUD_RATE = 9600
+ser = None
 
 # Load satellite data
 with open('satellites.json', 'r') as f:
@@ -31,10 +38,57 @@ def get_satellite_position(satellite):
         return None, None
     return az.degrees, alt.degrees
 
+def send_to_arduino(azimuth, elevation):
+    """Send azimuth and elevation data to Arduino in the required format"""
+    if ser is None or not ser.is_open:
+        return False
+        
+    az_str = f"AZ{int(round(azimuth))}"
+    el_str = f"EL{int(round(elevation))}"
+    command = f"<{az_str}><{el_str}>\n"
+    
+    try:
+        ser.write(command.encode('utf-8'))
+        return True
+    except serial.SerialException as e:
+        print(f"Error writing to serial port: {e}")
+        return False
+
+def initialize_serial(port):
+    """Initialize serial connection with the given port"""
+    global ser
+    try:
+        if ser and ser.is_open:
+            ser.close()
+        ser = serial.Serial(port, BAUD_RATE, timeout=1)
+        time.sleep(2)  # Give Arduino time to reset
+        return True
+    except serial.SerialException as e:
+        print(f"Could not open serial port {port}: {e}")
+        return False
+
 @app.route('/')
 def index():
     """Render the main page"""
     return render_template('index.html', satellites=SATELLITE_DATA['satellites'])
+
+@app.route('/get_serial_ports', methods=['GET'])
+def get_serial_ports():
+    """Get list of available serial ports"""
+    ports = [port.device for port in serial.tools.list_ports.comports()]
+    return jsonify({'ports': ports})
+
+@app.route('/set_serial_port', methods=['POST'])
+def set_serial_port():
+    """Set the serial port for Arduino communication"""
+    port = request.json.get('port')
+    if not port:
+        return jsonify({'error': 'No port specified'}), 400
+    
+    if initialize_serial(port):
+        return jsonify({'message': f'Successfully connected to {port}'})
+    else:
+        return jsonify({'error': f'Failed to connect to {port}'}), 500
 
 @app.route('/get_satellite_data', methods=['POST'])
 def get_satellite_data():
@@ -65,10 +119,17 @@ def get_satellite_data():
             'timestamp': datetime.now().strftime('%H:%M:%S UTC')
         })
     
+    # Send data to Arduino if serial connection is available
+    serial_status = "disconnected"
+    if ser and ser.is_open:
+        if send_to_arduino(az, el):
+            serial_status = "connected"
+    
     return jsonify({
         'azimuth': round(az, 2),
         'elevation': round(el, 2),
-        'timestamp': datetime.now().strftime('%H:%M:%S UTC')
+        'timestamp': datetime.now().strftime('%H:%M:%S UTC'),
+        'serial_status': serial_status
     })
 
 if __name__ == '__main__':
