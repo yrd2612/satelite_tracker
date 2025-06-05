@@ -132,5 +132,34 @@ def get_satellite_data():
         'serial_status': serial_status
     })
 
+@app.route('/set_manual_position', methods=['POST'])
+def set_manual_position():
+    """Set manual position for the antenna"""
+    data = request.json
+    azimuth = data.get('azimuth')
+    elevation = data.get('elevation')
+    
+    if azimuth is None or elevation is None:
+        return jsonify({'error': 'Missing azimuth or elevation values'}), 400
+    
+    if not (0 <= azimuth <= 360):
+        return jsonify({'error': 'Azimuth must be between 0 and 360 degrees'}), 400
+    
+    if not (0 <= elevation <= 90):
+        return jsonify({'error': 'Elevation must be between 0 and 90 degrees'}), 400
+    
+    if ser and ser.is_open:
+        if send_to_arduino(azimuth, elevation):
+            return jsonify({
+                'message': 'Position updated successfully',
+                'azimuth': round(azimuth, 2),
+                'elevation': round(elevation, 2),
+                'timestamp': datetime.now().strftime('%H:%M:%S UTC')
+            })
+        else:
+            return jsonify({'error': 'Failed to send position to Arduino'}), 500
+    else:
+        return jsonify({'error': 'Serial port not connected'}), 400
+
 if __name__ == '__main__':
     app.run(debug=True) 

@@ -85,13 +85,44 @@
                 </div>
 
                 <div class="mb-4">
-                    <label for="satelliteSelect" class="form-label">Select Satellite:</label>
-                    <select class="form-select" id="satelliteSelect">
-                        <option value="">Choose a satellite...</option>
-                        {% for satellite in satellites %}
-                        <option value="{{ satellite.name }}">{{ satellite.name }}</option>
-                        {% endfor %}
-                    </select>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="modeSwitch">
+                        <label class="form-check-label" for="modeSwitch">Manual Mode</label>
+                    </div>
+
+                    <!-- Automatic Mode (Satellite Tracking) -->
+                    <div id="autoMode">
+                        <label for="satelliteSelect" class="form-label">Select Satellite:</label>
+                        <select class="form-select" id="satelliteSelect">
+                            <option value="">Choose a satellite...</option>
+                            {% for satellite in satellites %}
+                            <option value="{{ satellite.name }}">{{ satellite.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Manual Mode -->
+                    <div id="manualMode" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="azimuthInput" class="form-label">Azimuth (0-360°):</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="azimuthInput" min="0" max="360" step="0.1" value="0">
+                                    <span class="input-group-text">°</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="elevationInput" class="form-label">Elevation (0-90°):</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="elevationInput" min="0" max="90" step="0.1" value="0">
+                                    <span class="input-group-text">°</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="sendManualValues">
+                            <i class="fas fa-paper-plane"></i> Send Values
+                        </button>
+                    </div>
                 </div>
 
                 <div class="loading">
@@ -125,6 +156,7 @@
     <script>
         let updateInterval;
         let currentSerialPort = null;
+        let isManualMode = false;
 
         function updateSerialPorts() {
             fetch('/get_serial_ports')
@@ -193,6 +225,76 @@
 
         // Initial load of serial ports
         updateSerialPorts();
+
+        // Mode switch handler
+        document.getElementById('modeSwitch').addEventListener('change', function() {
+            isManualMode = this.checked;
+            document.getElementById('autoMode').style.display = isManualMode ? 'none' : 'block';
+            document.getElementById('manualMode').style.display = isManualMode ? 'block' : 'none';
+            
+            // Clear any existing interval when switching modes
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+            
+            // Clear the data display
+            document.getElementById('satelliteData').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+        });
+
+        // Manual mode send values handler
+        document.getElementById('sendManualValues').addEventListener('click', function() {
+            const az = parseFloat(document.getElementById('azimuthInput').value);
+            const el = parseFloat(document.getElementById('elevationInput').value);
+            
+            if (isNaN(az) || isNaN(el)) {
+                document.getElementById('errorMessage').textContent = 'Please enter valid numbers for azimuth and elevation';
+                document.getElementById('errorMessage').style.display = 'block';
+                return;
+            }
+            
+            if (az < 0 || az > 360) {
+                document.getElementById('errorMessage').textContent = 'Azimuth must be between 0 and 360 degrees';
+                document.getElementById('errorMessage').style.display = 'block';
+                return;
+            }
+            
+            if (el < 0 || el > 90) {
+                document.getElementById('errorMessage').textContent = 'Elevation must be between 0 and 90 degrees';
+                document.getElementById('errorMessage').style.display = 'block';
+                return;
+            }
+
+            // Update display
+            document.getElementById('satelliteData').style.display = 'block';
+            document.getElementById('azimuth').textContent = az.toFixed(1) + '°';
+            document.getElementById('elevation').textContent = el.toFixed(1) + '°';
+            document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
+            document.getElementById('errorMessage').style.display = 'none';
+
+            // Send to Arduino if connected
+            if (currentSerialPort) {
+                fetch('/set_manual_position', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ azimuth: az, elevation: el })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('errorMessage').textContent = data.error;
+                        document.getElementById('errorMessage').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('errorMessage').textContent = 'Error sending position data';
+                    document.getElementById('errorMessage').style.display = 'block';
+                });
+            }
+        });
 
         function updateSatelliteData() {
             const satelliteSelect = document.getElementById('satelliteSelect');
