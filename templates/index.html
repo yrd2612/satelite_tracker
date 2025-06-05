@@ -6,7 +6,7 @@
     <title>Satellite Tracker</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/nouislider@14.6.3/distribute/nouislider.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/round-slider@1.6.1/dist/roundslider.min.css" rel="stylesheet">
     <style>
         body {
             background-color: #f8f9fa;
@@ -117,6 +117,31 @@
             gap: 40px;
             margin-bottom: 30px;
         }
+
+        /* Round Slider Customization */
+        .rs-control .rs-range-color {
+            background-color: #0d6efd;
+        }
+        .rs-control .rs-path-color {
+            background-color: #dee2e6;
+        }
+        .rs-control .rs-handle {
+            background-color: #0d6efd;
+            border: 2px solid #fff;
+        }
+        .rs-control .rs-handle.rs-focus {
+            border-color: #0d6efd;
+        }
+        .rs-control .rs-handle:after {
+            border-color: #0d6efd;
+            background-color: #fff;
+        }
+        .rs-tooltip {
+            background-color: #0d6efd;
+            color: #fff;
+            border-radius: 4px;
+            padding: 2px 8px;
+        }
     </style>
 </head>
 <body>
@@ -166,8 +191,7 @@
                             <!-- Azimuth Dial -->
                             <div class="text-center">
                                 <div class="dial-container">
-                                    <div id="azimuthDial" class="dial"></div>
-                                    <div class="dial-value" id="azimuthDialValue">0°</div>
+                                    <div id="azimuthDial"></div>
                                 </div>
                                 <div class="dial-label">Azimuth (0-360°)</div>
                             </div>
@@ -175,8 +199,7 @@
                             <!-- Elevation Dial -->
                             <div class="text-center">
                                 <div class="dial-container">
-                                    <div id="elevationDial" class="dial"></div>
-                                    <div class="dial-value" id="elevationDialValue">0°</div>
+                                    <div id="elevationDial"></div>
                                 </div>
                                 <div class="dial-label">Elevation (0-90°)</div>
                             </div>
@@ -184,8 +207,7 @@
                             <!-- Roll Dial -->
                             <div class="text-center">
                                 <div class="dial-container">
-                                    <div id="rollDial" class="dial"></div>
-                                    <div class="dial-value" id="rollDialValue">0°</div>
+                                    <div id="rollDial"></div>
                                 </div>
                                 <div class="dial-label">Roll (0-90°)</div>
                             </div>
@@ -253,6 +275,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/nouislider@14.6.3/distribute/nouislider.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/round-slider@1.6.1/dist/roundslider.min.js"></script>
     <script>
         let updateInterval;
         let currentSerialPort = null;
@@ -480,90 +504,88 @@
         // Initialize dials when manual mode is shown
         function initializeDials() {
             // Azimuth Dial
-            const azimuthDial = document.getElementById('azimuthDial');
-            noUiSlider.create(azimuthDial, {
-                start: 0,
-                connect: [true, false],
-                range: {
-                    'min': 0,
-                    'max': 360
-                },
-                format: {
-                    to: value => Math.round(value),
-                    from: value => value
+            $("#azimuthDial").roundSlider({
+                radius: 80,
+                width: 16,
+                handleSize: 24,
+                handleShape: "round",
+                sliderType: "min-range",
+                value: 0,
+                min: 0,
+                max: 360,
+                step: 1,
+                showTooltip: true,
+                tooltipFormat: "changeTooltip",
+                change: function(e) {
+                    const value = e.value;
+                    document.getElementById('azimuthInput').value = value;
                 }
             });
 
             // Elevation Dial
-            const elevationDial = document.getElementById('elevationDial');
-            noUiSlider.create(elevationDial, {
-                start: 0,
-                connect: [true, false],
-                range: {
-                    'min': 0,
-                    'max': 90
-                },
-                format: {
-                    to: value => Math.round(value),
-                    from: value => value
+            $("#elevationDial").roundSlider({
+                radius: 80,
+                width: 16,
+                handleSize: 24,
+                handleShape: "round",
+                sliderType: "min-range",
+                value: 0,
+                min: 0,
+                max: 90,
+                step: 1,
+                showTooltip: true,
+                tooltipFormat: "changeTooltip",
+                change: function(e) {
+                    const value = e.value;
+                    document.getElementById('elevationInput').value = value;
                 }
             });
 
             // Roll Dial
-            const rollDial = document.getElementById('rollDial');
-            noUiSlider.create(rollDial, {
-                start: 0,
-                connect: [true, false],
-                range: {
-                    'min': 0,
-                    'max': 90
-                },
-                format: {
-                    to: value => Math.round(value),
-                    from: value => value
+            $("#rollDial").roundSlider({
+                radius: 80,
+                width: 16,
+                handleSize: 24,
+                handleShape: "round",
+                sliderType: "min-range",
+                value: 0,
+                min: 0,
+                max: 90,
+                step: 1,
+                showTooltip: true,
+                tooltipFormat: "changeTooltip",
+                change: function(e) {
+                    const value = e.value;
+                    document.getElementById('rollInput').value = value;
                 }
-            });
-
-            // Update input fields when dials change
-            azimuthDial.noUiSlider.on('update', function(values, handle) {
-                const value = Math.round(values[handle]);
-                document.getElementById('azimuthInput').value = value;
-                document.getElementById('azimuthDialValue').textContent = value + '°';
-            });
-
-            elevationDial.noUiSlider.on('update', function(values, handle) {
-                const value = Math.round(values[handle]);
-                document.getElementById('elevationInput').value = value;
-                document.getElementById('elevationDialValue').textContent = value + '°';
-            });
-
-            rollDial.noUiSlider.on('update', function(values, handle) {
-                const value = Math.round(values[handle]);
-                document.getElementById('rollInput').value = value;
-                document.getElementById('rollDialValue').textContent = value + '°';
             });
 
             // Update dials when input fields change
             document.getElementById('azimuthInput').addEventListener('change', function() {
                 const value = parseFloat(this.value);
                 if (!isNaN(value) && value >= 0 && value <= 360) {
-                    azimuthDial.noUiSlider.set(value);
+                    $("#azimuthDial").roundSlider("setValue", value);
                 }
             });
 
             document.getElementById('elevationInput').addEventListener('change', function() {
                 const value = parseFloat(this.value);
                 if (!isNaN(value) && value >= 0 && value <= 90) {
-                    elevationDial.noUiSlider.set(value);
+                    $("#elevationDial").roundSlider("setValue", value);
                 }
             });
 
             document.getElementById('rollInput').addEventListener('change', function() {
                 const value = parseFloat(this.value);
                 if (!isNaN(value) && value >= 0 && value <= 90) {
-                    rollDial.noUiSlider.set(value);
+                    $("#rollDial").roundSlider("setValue", value);
                 }
             });
+        }
+
+        // Custom tooltip format
+        function changeTooltip(e) {
+            return e.value + "°";
         }
     </script>
 </body>
